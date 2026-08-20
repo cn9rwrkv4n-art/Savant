@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MLB Roster + Trades CSV Downloader — v1</title>
+<style>
+  /* ============================================================
+     MLB ROSTER + TRADES CSV DOWNLOADER — FROZEN BASELINE v1
+     ------------------------------------------------------------
+     This file is intentionally self-contained:
+       • No frameworks
+       • No server required
+       • No external JavaScript libraries
+       • Pulls current data directly from MLB Stats API
+       • Generates CSV files locally in your browser
+
+     IMPORTANT VERSION NOTE:
+     Treat this file as the frozen v1 baseline. Future changes
+     should be layered into v2, v3, etc. instead of replacing v1.
+     ============================================================ */
+
+  :root {
+    --bg: #f3f5f7;
+    --panel: #ffffff;
+    --text: #17202a;
+    --muted: #667085;
+    --line: #d9dee5;
+    --accent: #0b5ed7;
+    --accent-dark: #0849a6;
+    --success: #157347;
+    --danger: #b42318;
+    --soft: #eef4ff;
+    --radius: 14px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  .app {
+    width: min(1120px, calc(100% - 28px));
+    margin: 24px auto 50px;
+  }
+
+  header {
+    margin-bottom: 18px;
+  }
+
+  h1 {
+    margin: 0 0 6px;
+    font-size: clamp(25px, 4vw, 38px);
+    line-height: 1.1;
+  }
+
+  .subtitle {
+    margin: 0;
+    color: var(--muted);
+    font-size: 15px;
+  }
+
+  .version {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 5px 9px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: white;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    margin: 18px 0 14px;
+  }
+
+  .tab {
+    appearance: none;
+    border: 1px solid var(--line);
+    background: white;
+    color: var(--text);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  .panel {
+    display: none;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: 0 5px 18px rgba(16, 24, 40, 0.05);
+  }
+
+  .panel.active { display: block; }
+
+  .panel h2 {
+    margin: 0 0 5px;
+    font-size: 21px;
+  }
+
+  .panel .help {
+    margin: 0 0 16px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .controls {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  label {
+    font-size: 12px;
+    font-weight: 800;
+    color: #344054;
+  }
+
+  select,
+  input[type="date"],
+  input[type="file"] {
+    width: 100%;
+    min-height: 42px;
+    border: 1px solid #cfd6df;
+    border-radius: 9px;
+    background: white;
+    color: var(--text);
+    padding: 8px 10px;
+    font-size: 15px;
+  }
+
+  input[type="file"] {
+    padding: 7px;
+  }
+
+  .buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px;
+    margin: 12px 0;
+  }
+
+  button.action {
+    appearance: none;
+    border: 0;
+    border-radius: 9px;
+    padding: 10px 14px;
+    background: var(--accent);
+    color: white;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  button.action:hover { background: var(--accent-dark); }
+
+  button.action.secondary {
+    background: #475467;
+  }
+
+  button.action.success {
+    background: var(--success);
+  }
+
+  button.action:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .status {
+    min-height: 22px;
+    margin: 8px 0 12px;
+    padding: 9px 11px;
+    border-radius: 9px;
+    background: #f8fafc;
+    border: 1px solid #e4e7ec;
+    color: #475467;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .status.error {
+    color: var(--danger);
+    background: #fff4f2;
+    border-color: #fecdca;
+  }
+
+  .status.success {
+    color: #05603a;
+    background: #ecfdf3;
+    border-color: #abefc6;
+  }
+
+  .table-wrap {
+    width: 100%;
+    overflow: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    max-height: 510px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 760px;
+    background: white;
+    font-size: 13px;
+  }
+
+  th, td {
+    padding: 9px 10px;
+    border-bottom: 1px solid #eceff3;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  th {
+    position: sticky;
+    top: 0;
+    background: #f8fafc;
+    z-index: 1;
+    color: #344054;
+    font-size: 12px;
+  }
+
+  tr:last-child td { border-bottom: 0; }
+
+  .empty {
+    padding: 24px;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  .note {
+    margin-top: 14px;
+    padding: 12px;
+    border-radius: 10px;
+    background: var(--soft);
+    color: #344054;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  code {
+    background: #eef1f5;
+    border-radius: 5px;
+    padding: 1px 5px;
+  }
+
+  @media (max-width: 800px) {
+    .controls { grid-template-columns: 1fr 1fr; }
+  }
+
+  @media (max-width: 520px) {
+    .app { width: min(100% - 18px, 1120px); margin-top: 12px; }
+    .controls { grid-template-columns: 1fr; }
+    .panel { padding: 14px; }
+    .buttons button { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>MLB Roster + Trades CSV Downloader</h1>
+    <p class="subtitle">Live MLB rosters, Baseball Savant/MLB Player IDs, transactions, trades, and roster comparison.</p>
+    <span class="version">Frozen baseline v1</span>
+  </header>
+
+  <nav class="tabs" aria-label="Downloader sections">
+    <button class="tab active" data-tab="rosterPanel">Roster Downloader</button>
+    <button class="tab" data-tab="transactionsPanel">Transactions / Trades</button>
+    <button class="tab" data-tab="comparePanel">Compare Rosters</button>
+  </nav>
+
+  <!-- ==========================================================
+       SECTION 1 — ROSTER DOWNLOADER
+       ========================================================== -->
+  <section class="panel active" id="rosterPanel">
+    <h2>Roster Downloader</h2>
+    <p class="help">
+      Pull the current MLB roster for all 30 clubs or one team. "Batters" means non-pitchers;
+      two-way players are included in both Batter and Pitcher filters.
+    </p>
+
+    <div class="controls">
+      <div class="field">
+        <label for="rosterType">Roster</label>
+        <select id="rosterType">
+          <option value="40Man" selected>40-Man Roster</option>
+          <option value="active">Active Roster</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="playerType">Players</label>
+        <select id="playerType">
+          <option value="all" selected>All Players</option>
+          <option value="batters">Batters Only</option>
+          <option value="pitchers">Pitchers Only</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="rosterTeam">Team</label>
+        <select id="rosterTeam">
+          <option value="all">All MLB Teams</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="sortRoster">Sort</label>
+        <select id="sortRoster">
+          <option value="team-player" selected>Team → Player</option>
+          <option value="player">Player Name</option>
+          <option value="id">Player ID</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="buttons">
+      <button class="action" id="previewRoster">Preview Current Roster</button>
+      <button class="action success" id="downloadRoster" disabled>Download Roster CSV</button>
+    </div>
+
+    <div class="status" id="rosterStatus">Loading MLB team list…</div>
+    <div class="table-wrap" id="rosterTableWrap">
+      <div class="empty">Run a roster preview to see results.</div>
+    </div>
+
+    <div class="note">
+      CSV columns: <code>Team</code>, <code>Player</code>, <code>PlayerID</code>,
+      <code>Position</code>, <code>PositionType</code>, <code>RosterStatus</code>, <code>TeamID</code>.
+      The <code>PlayerID</code> is MLB's player ID, which Baseball Savant uses for its player identifiers.
+    </div>
+  </section>
+
+  <!-- ==========================================================
+       SECTION 2 — TRANSACTIONS / TRADES
+       ========================================================== -->
+  <section class="panel" id="transactionsPanel">
+    <h2>Transactions / Trades</h2>
+    <p class="help">
+      Pull MLB transactions for a date range. Choose "Trades Only" to filter descriptions/types
+      that identify trade activity.
+    </p>
+
+    <div class="controls">
+      <div class="field">
+        <label for="txnStart">Start Date</label>
+        <input type="date" id="txnStart">
+      </div>
+
+      <div class="field">
+        <label for="txnEnd">End Date</label>
+        <input type="date" id="txnEnd">
+      </div>
+
+      <div class="field">
+        <label for="txnType">Transaction Type</label>
+        <select id="txnType">
+          <option value="trades" selected>Trades Only</option>
+          <option value="all">All Transactions</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="txnTeam">Team</label>
+        <select id="txnTeam">
+          <option value="all">All MLB Teams</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="buttons">
+      <button class="action" id="previewTransactions">Preview Transactions</button>
+      <button class="action success" id="downloadTransactions" disabled>Download Transactions CSV</button>
+    </div>
+
+    <div class="status" id="txnStatus">Choose a date range, then preview.</div>
+    <div class="table-wrap" id="txnTableWrap">
+      <div class="empty">Run a transaction preview to see results.</div>
+    </div>
+
+    <div class="note">
+      Trade data is based on MLB's transaction records. The app keeps MLB's original transaction
+      description in the CSV so you can review exactly what MLB reported.
+    </div>
+  </section>
+
+  <!-- ==========================================================
+       SECTION 3 — ROSTER COMPARISON
+       ========================================================== -->
+  <section class="panel" id="comparePanel">
+    <h2>Compare Rosters</h2>
+    <p class="help">
+      Load a roster CSV previously downloaded by this app, then compare it to the current MLB roster.
+      Player matching is done by unique <code>PlayerID</code>, not by player name.
+    </p>
+
+    <div class="controls">
+      <div class="field">
+        <label for="oldRosterFile">Previous Roster CSV</label>
+        <input type="file" id="oldRosterFile" accept=".csv,text/csv">
+      </div>
+
+      <div class="field">
+        <label for="compareRosterType">Current Roster</label>
+        <select id="compareRosterType">
+          <option value="40Man" selected>40-Man Roster</option>
+          <option value="active">Active Roster</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="comparePlayerType">Players</label>
+        <select id="comparePlayerType">
+          <option value="all" selected>All Players</option>
+          <option value="batters">Batters Only</option>
+          <option value="pitchers">Pitchers Only</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="compareTeam">Team Scope</label>
+        <select id="compareTeam">
+          <option value="all">All MLB Teams</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="buttons">
+      <button class="action" id="runComparison">Compare to Current MLB Roster</button>
+      <button class="action success" id="downloadComparison" disabled>Download Changes CSV</button>
+    </div>
+
+    <div class="status" id="compareStatus">Choose a previous roster CSV first.</div>
+    <div class="table-wrap" id="compareTableWrap">
+      <div class="empty">Comparison results will appear here.</div>
+    </div>
+
+    <div class="note">
+      Change labels:
+      <strong>TEAM CHANGED</strong> = same PlayerID, different team;
+      <strong>ADDED</strong> = appears now but not in the old CSV;
+      <strong>REMOVED</strong> = appeared in the old CSV but not the current comparison scope;
+      <strong>POSITION CHANGED</strong> = same player/team but a different roster position.
+    </div>
+  </section>
+</div>
+
+<script>
+/* ==============================================================
+   MLB ROSTER + TRADES CSV DOWNLOADER — FROZEN BASELINE v1
+   ==============================================================
+
+   DATA SOURCE
+   -----------
+   MLB Stats API base:
+   https://statsapi.mlb.com/api/v1
+
+   Main endpoints used:
+   1) MLB teams:
+      /teams?sportId=1
+
+   2) Team roster:
+      /teams/{TEAM_ID}/roster?rosterType=40Man
+      /teams/{TEAM_ID}/roster?rosterType=active
+
+   3) Transactions:
+      /transactions?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
+
+   DESIGN NOTES
+   ------------
+   • Team IDs are NOT hard-coded. They are downloaded from MLB.
+   • PlayerID comes directly from MLB's person.id.
+   • CSV creation happens locally in the browser.
+   • No user data is uploaded by this page.
+   • Two-way players are intentionally included in BOTH the
+     "Batters Only" and "Pitchers Only" roster filters.
+   ============================================================== */
+
+const API_BASE = "https://statsapi.mlb.com/api/v1";
+
+let mlbTeams = [];
+let rosterRows = [];
+let transactionRows = [];
+let comparisonRows = [];
+
+/* ---------- Small DOM helpers ---------- */
+const $ = (id) => document.getElementById(id);
+
+function setStatus(id, message, kind = "") {
+  const el = $(id);
+  el.textContent = message;
+  el.className = "status" + (kind ? " " + kind : "");
+}
+
+function escapeHTML(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+/* ---------- Tabs ---------- */
+document.querySelectorAll(".tab").forEach(button => {
+  button.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+
+    button.classList.add("active");
+    $(button.dataset.tab).classList.add("active");
+  });
+});
+
+/* ==============================================================
+   TEAM LIST
+   ============================================================== */
+
+async function loadTeams() {
+  try {
+    const response = await fetch(`${API_BASE}/teams?sportId=1`);
+    if (!response.ok) throw new Error(`MLB team request failed (${response.status}).`);
+
+    const data = await response.json();
+
+    mlbTeams = (data.teams || [])
+      .filter(team => team.active !== false)
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    populateTeamSelect("rosterTeam");
+    populateTeamSelect("txnTeam");
+    populateTeamSelect("compareTeam");
+
+    setStatus("rosterStatus", `Ready. Loaded ${mlbTeams.length} MLB teams.`, "success");
+  } catch (error) {
+    console.error(error);
+    setStatus(
+      "rosterStatus",
+      "Could not load MLB teams. Make sure you are online, then reload this page. " + error.message,
+      "error"
+    );
+  }
+}
+
+function populateTeamSelect(selectId) {
+  const select = $(selectId);
+  const currentValue = select.value;
+
+  select.innerHTML = '<option value="all">All MLB Teams</option>';
+
+  for (const team of mlbTeams) {
+    const option = document.createElement("option");
+    option.value = String(team.id);
+    option.textContent = `${team.abbreviation} — ${team.name}`;
+    select.appendChild(option);
+  }
+
+  if ([...select.options].some(o => o.value === currentValue)) {
+    select.value = currentValue;
+  }
+}
+
+function selectedTeams(selectId) {
+  const value = $(selectId).value;
+  if (value === "all") return mlbTeams;
+  return mlbTeams.filter(team => String(team.id) === value);
+}
+
+/* ==============================================================
+   ROSTER DOWNLOAD
+   ============================================================== */
+
+/*
+  Player filter logic:
+    pitcher = position type/name/abbreviation indicates pitcher
+    two-way = MLB identifies the roster position as two-way / TWP
+
+  A two-way player belongs in BOTH filter results because selecting
+  "Batters Only" should not accidentally remove a two-way hitter,
+  while "Pitchers Only" should not remove that player's pitching role.
+*/
+function playerMatchesFilter(row, filter) {
+  if (filter === "all") return true;
+
+  const type = String(row.PositionType || "").toLowerCase();
+  const position = String(row.Position || "").toLowerCase();
+
+  const isPitcher =
+    type.includes("pitcher") ||
+    position === "p" ||
+    position.includes("pitcher");
+
+  const isTwoWay =
+    type.includes("two-way") ||
+    type.includes("two way") ||
+    position === "twp" ||
+    position.includes("two-way") ||
+    position.includes("two way");
+
+  if (filter === "pitchers") return isPitcher || isTwoWay;
+  if (filter === "batters") return !isPitcher || isTwoWay;
+
+  return true;
+}
+
+async function fetchTeamRoster(team, rosterType) {
+  const url = `${API_BASE}/teams/${team.id}/roster?rosterType=${encodeURIComponent(rosterType)}`;
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`${team.abbreviation} roster failed (${response.status}).`);
+  }
+
+  const data = await response.json();
+
+  return (data.roster || []).map(entry => ({
+    Team: team.abbreviation || team.name,
+    Player: entry.person?.fullName || "",
+    PlayerID: entry.person?.id ?? "",
+    Position: entry.position?.abbreviation || entry.position?.name || "",
+    PositionType: entry.position?.type || "",
+    RosterStatus: entry.status?.description || entry.status?.code || "",
+    TeamID: team.id
+  }));
+}
+
+async function getCurrentRosterRows(teamSelectId, rosterType, playerFilter, statusId) {
+  if (!mlbTeams.length) {
+    throw new Error("MLB team list has not loaded yet.");
+  }
+
+  const teams = selectedTeams(teamSelectId);
+  if (!teams.length) throw new Error("No team was selected.");
+
+  setStatus(statusId, `Downloading ${rosterType === "40Man" ? "40-man" : "active"} roster data for ${teams.length} team(s)…`);
+
+  /*
+    Promise.allSettled is used so one temporary team request failure does
+    not automatically discard successful results from the other 29 teams.
+  */
+  const results = await Promise.allSettled(
+    teams.map(team => fetchTeamRoster(team, rosterType))
+  );
+
+  const rows = [];
+  const failures = [];
+
+  results.forEach((result, index) => {
+    if (result.status === "fulfilled") {
+      rows.push(...result.value);
+    } else {
+      failures.push(`${teams[index].abbreviation}: ${result.reason?.message || "failed"}`);
+    }
+  });
+
+  const filtered = rows.filter(row => playerMatchesFilter(row, playerFilter));
+
+  if (!filtered.length && failures.length) {
+    throw new Error("No roster rows were returned. " + failures.join(" | "));
+  }
+
+  if (failures.length) {
+    setStatus(
+      statusId,
+      `Loaded ${filtered.length} players, but ${failures.length} team request(s) failed: ${failures.join(" | ")}`,
+      "error"
+    );
+  }
+
+  return filtered;
+}
+
+function sortRosterRows(rows) {
+  const sort = $("sortRoster").value;
+  const copy = [...rows];
+
+  if (sort === "player") {
+    copy.sort((a, b) => a.Player.localeCompare(b.Player) || a.Team.localeCompare(b.Team));
+  } else if (sort === "id") {
+    copy.sort((a, b) => Number(a.PlayerID) - Number(b.PlayerID));
+  } else {
+    copy.sort((a, b) => a.Team.localeCompare(b.Team) || a.Player.localeCompare(b.Player));
+  }
+
+  return copy;
+}
+
+async function previewRoster() {
+  $("previewRoster").disabled = true;
+  $("downloadRoster").disabled = true;
+
+  try {
+    const rows = await getCurrentRosterRows(
+      "rosterTeam",
+      $("rosterType").value,
+      $("playerType").value,
+      "rosterStatus"
+    );
+
+    rosterRows = sortRosterRows(rows);
+    renderTable("rosterTableWrap", rosterRows, [
+      "Team", "Player", "PlayerID", "Position", "PositionType", "RosterStatus", "TeamID"
+    ]);
+
+    setStatus("rosterStatus", `Ready: ${rosterRows.length} player(s).`, "success");
+    $("downloadRoster").disabled = rosterRows.length === 0;
+  } catch (error) {
+    console.error(error);
+    rosterRows = [];
+    renderEmpty("rosterTableWrap", "No roster results.");
+    setStatus("rosterStatus", error.message, "error");
+  } finally {
+    $("previewRoster").disabled = false;
+  }
+}
+
+$("previewRoster").addEventListener("click", previewRoster);
+
+$("downloadRoster").addEventListener("click", () => {
+  if (!rosterRows.length) return;
+
+  const rosterLabel = $("rosterType").value === "40Man" ? "40man" : "active";
+  const playerLabel = $("playerType").value;
+  const teamLabel = $("rosterTeam").value === "all"
+    ? "all-teams"
+    : (mlbTeams.find(t => String(t.id) === $("rosterTeam").value)?.abbreviation || "team");
+
+  const filename = `mlb-roster_${rosterLabel}_${playerLabel}_${teamLabel}_${todayISO()}.csv`;
+
+  downloadCSV(filename, rosterRows, [
+    "Team", "Player", "PlayerID", "Position", "PositionType", "RosterStatus", "TeamID"
+  ]);
+});
+
+/* ==============================================================
+   TRANSACTIONS / TRADES
+   ============================================================== */
+
+function looksLikeTrade(txn) {
+  const text = [
+    txn.typeDesc,
+    txn.description,
+    txn.typeCode
+  ].filter(Boolean).join(" ").toLowerCase();
+
+  return text.includes("trade") || text.includes("traded");
+}
+
+function normalizeTransaction(txn) {
+  return {
+    Date: txn.date || txn.effectiveDate || "",
+    Player: txn.person?.fullName || "",
+    PlayerID: txn.person?.id ?? "",
+    FromTeam: txn.fromTeam?.abbreviation || txn.fromTeam?.name || "",
+    FromTeamID: txn.fromTeam?.id ?? "",
+    ToTeam: txn.toTeam?.abbreviation || txn.toTeam?.name || "",
+    ToTeamID: txn.toTeam?.id ?? "",
+    Type: txn.typeDesc || "",
+    TypeCode: txn.typeCode || "",
+    Description: txn.description || ""
+  };
+}
+
+async function previewTransactions() {
+  $("previewTransactions").disabled = true;
+  $("downloadTransactions").disabled = true;
+
+  try {
+    const start = $("txnStart").value;
+    const end = $("txnEnd").value;
+
+    if (!start || !end) throw new Error("Choose both a start date and an end date.");
+    if (start > end) throw new Error("Start date cannot be after end date.");
+
+    const params = new URLSearchParams({
+      startDate: start,
+      endDate: end
+    });
+
+    if ($("txnTeam").value !== "all") {
+      params.set("teamId", $("txnTeam").value);
+    }
+
+    setStatus("txnStatus", "Downloading MLB transactions…");
+
+    const response = await fetch(`${API_BASE}/transactions?${params.toString()}`);
+    if (!response.ok) throw new Error(`MLB transaction request failed (${response.status}).`);
+
+    const data = await response.json();
+    let txns = data.transactions || [];
+
+    if ($("txnType").value === "trades") {
+      txns = txns.filter(looksLikeTrade);
+    }
+
+    transactionRows = txns
+      .map(normalizeTransaction)
+      .sort((a, b) =>
+        String(b.Date).localeCompare(String(a.Date)) ||
+        String(a.Player).localeCompare(String(b.Player))
+      );
+
+    renderTable("txnTableWrap", transactionRows, [
+      "Date", "Player", "PlayerID", "FromTeam", "FromTeamID",
+      "ToTeam", "ToTeamID", "Type", "TypeCode", "Description"
+    ]);
+
+    setStatus("txnStatus", `Ready: ${transactionRows.length} transaction record(s).`, "success");
+    $("downloadTransactions").disabled = transactionRows.length === 0;
+  } catch (error) {
+    console.error(error);
+    transactionRows = [];
+    renderEmpty("txnTableWrap", "No transaction results.");
+    setStatus("txnStatus", error.message, "error");
+  } finally {
+    $("previewTransactions").disabled = false;
+  }
+}
+
+$("previewTransactions").addEventListener("click", previewTransactions);
+
+$("downloadTransactions").addEventListener("click", () => {
+  if (!transactionRows.length) return;
+
+  const typeLabel = $("txnType").value === "trades" ? "trades" : "transactions";
+  const teamLabel = $("txnTeam").value === "all"
+    ? "all-teams"
+    : (mlbTeams.find(t => String(t.id) === $("txnTeam").value)?.abbreviation || "team");
+
+  const filename =
+    `mlb-${typeLabel}_${teamLabel}_${$("txnStart").value}_to_${$("txnEnd").value}.csv`;
+
+  downloadCSV(filename, transactionRows, [
+    "Date", "Player", "PlayerID", "FromTeam", "FromTeamID",
+    "ToTeam", "ToTeamID", "Type", "TypeCode", "Description"
+  ]);
+});
+
+/* ==============================================================
+   ROSTER COMPARISON
+   ============================================================== */
+
+async function runComparison() {
+  $("runComparison").disabled = true;
+  $("downloadComparison").disabled = true;
+
+  try {
+    const file = $("oldRosterFile").files[0];
+    if (!file) throw new Error("Choose a previous roster CSV first.");
+
+    setStatus("compareStatus", "Reading previous CSV…");
+
+    const oldText = await file.text();
+    const oldRows = parseCSVToObjects(oldText);
+
+    if (!oldRows.length) throw new Error("The previous CSV contains no data rows.");
+    if (!("PlayerID" in oldRows[0])) {
+      throw new Error("The CSV must contain a PlayerID column. Use a roster CSV downloaded by this app.");
+    }
+
+    const currentRows = await getCurrentRosterRows(
+      "compareTeam",
+      $("compareRosterType").value,
+      $("comparePlayerType").value,
+      "compareStatus"
+    );
+
+    comparisonRows = compareRosters(oldRows, currentRows);
+
+    renderTable("compareTableWrap", comparisonRows, [
+      "Change", "Player", "PlayerID",
+      "PreviousTeam", "CurrentTeam",
+      "PreviousPosition", "CurrentPosition"
+    ]);
+
+    setStatus(
+      "compareStatus",
+      `Comparison complete: ${comparisonRows.length} change(s) found.`,
+      "success"
+    );
+
+    $("downloadComparison").disabled = comparisonRows.length === 0;
+  } catch (error) {
+    console.error(error);
+    comparisonRows = [];
+    renderEmpty("compareTableWrap", "No comparison results.");
+    setStatus("compareStatus", error.message, "error");
+  } finally {
+    $("runComparison").disabled = false;
+  }
+}
+
+function compareRosters(oldRows, currentRows) {
+  /*
+    NOTE:
+    PlayerID is deliberately converted to String before map lookup.
+    This prevents a numeric ID from failing to match the same ID read
+    as text from a CSV file.
+  */
+  const oldMap = new Map();
+  const newMap = new Map();
+
+  for (const row of oldRows) {
+    const id = String(row.PlayerID || "").trim();
+    if (id) oldMap.set(id, row);
+  }
+
+  for (const row of currentRows) {
+    const id = String(row.PlayerID || "").trim();
+    if (id) newMap.set(id, row);
+  }
+
+  const changes = [];
+
+  // Players currently present: detect additions, team changes, position changes.
+  for (const [id, current] of newMap) {
+    const previous = oldMap.get(id);
+
+    if (!previous) {
+      changes.push({
+        Change: "ADDED",
+        Player: current.Player,
+        PlayerID: id,
+        PreviousTeam: "",
+        CurrentTeam: current.Team || "",
+        PreviousPosition: "",
+        CurrentPosition: current.Position || ""
+      });
+      continue;
+    }
+
+    const oldTeam = String(previous.Team || "").trim();
+    const newTeam = String(current.Team || "").trim();
+    const oldPosition = String(previous.Position || "").trim();
+    const newPosition = String(current.Position || "").trim();
+
+    if (oldTeam !== newTeam) {
+      changes.push({
+        Change: "TEAM CHANGED",
+        Player: current.Player || previous.Player || "",
+        PlayerID: id,
+        PreviousTeam: oldTeam,
+        CurrentTeam: newTeam,
+        PreviousPosition: oldPosition,
+        CurrentPosition: newPosition
+      });
+    } else if (oldPosition !== newPosition) {
+      changes.push({
+        Change: "POSITION CHANGED",
+        Player: current.Player || previous.Player || "",
+        PlayerID: id,
+        PreviousTeam: oldTeam,
+        CurrentTeam: newTeam,
+        PreviousPosition: oldPosition,
+        CurrentPosition: newPosition
+      });
+    }
+  }
+
+  // Players present in the old CSV but absent from current comparison scope.
+  for (const [id, previous] of oldMap) {
+    if (!newMap.has(id)) {
+      changes.push({
+        Change: "REMOVED",
+        Player: previous.Player || "",
+        PlayerID: id,
+        PreviousTeam: previous.Team || "",
+        CurrentTeam: "",
+        PreviousPosition: previous.Position || "",
+        CurrentPosition: ""
+      });
+    }
+  }
+
+  const changeOrder = {
+    "TEAM CHANGED": 1,
+    "ADDED": 2,
+    "REMOVED": 3,
+    "POSITION CHANGED": 4
+  };
+
+  changes.sort((a, b) =>
+    (changeOrder[a.Change] || 99) - (changeOrder[b.Change] || 99) ||
+    String(a.Player).localeCompare(String(b.Player))
+  );
+
+  return changes;
+}
+
+$("runComparison").addEventListener("click", runComparison);
+
+$("downloadComparison").addEventListener("click", () => {
+  if (!comparisonRows.length) return;
+
+  downloadCSV(
+    `mlb-roster-changes_${todayISO()}.csv`,
+    comparisonRows,
+    [
+      "Change", "Player", "PlayerID",
+      "PreviousTeam", "CurrentTeam",
+      "PreviousPosition", "CurrentPosition"
+    ]
+  );
+});
+
+/* ==============================================================
+   TABLE RENDERING
+   ============================================================== */
+
+function renderTable(containerId, rows, columns) {
+  const container = $(containerId);
+
+  if (!rows.length) {
+    renderEmpty(containerId, "No matching rows.");
+    return;
+  }
+
+  const header = columns.map(col => `<th>${escapeHTML(col)}</th>`).join("");
+
+  const body = rows.map(row => {
+    const cells = columns
+      .map(col => `<td>${escapeHTML(row[col] ?? "")}</td>`)
+      .join("");
+    return `<tr>${cells}</tr>`;
+  }).join("");
+
+  container.innerHTML = `
+    <table>
+      <thead><tr>${header}</tr></thead>
+      <tbody>${body}</tbody>
+    </table>
+  `;
+}
+
+function renderEmpty(containerId, message) {
+  $(containerId).innerHTML = `<div class="empty">${escapeHTML(message)}</div>`;
+}
+
+/* ==============================================================
+   CSV EXPORT
+   ============================================================== */
+
+function csvCell(value) {
+  const text = String(value ?? "");
+
+  /*
+    Standard CSV escaping:
+    • double any internal quote
+    • wrap the field in quotes if it contains commas, quotes, or line breaks
+  */
+  if (/[",\r\n]/.test(text)) {
+    return `"${text.replaceAll('"', '""')}"`;
+  }
+
+  return text;
+}
+
+function rowsToCSV(rows, columns) {
+  const lines = [
+    columns.map(csvCell).join(","),
+    ...rows.map(row => columns.map(col => csvCell(row[col])).join(","))
+  ];
+
+  /*
+    UTF-8 BOM helps Excel/Numbers correctly recognize Unicode characters
+    in player names. CRLF line breaks provide broad CSV compatibility.
+  */
+  return "\uFEFF" + lines.join("\r\n");
+}
+
+function downloadCSV(filename, rows, columns) {
+  const csv = rowsToCSV(rows, columns);
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/* ==============================================================
+   CSV IMPORT / PARSER
+   ============================================================== */
+
+/*
+  Lightweight CSV parser that supports:
+    • quoted fields
+    • commas inside quoted fields
+    • escaped double quotes ("")
+    • CRLF or LF line endings
+
+  This avoids requiring a third-party CSV library.
+*/
+function parseCSVRows(text) {
+  text = text.replace(/^\uFEFF/, "");
+
+  const rows = [];
+  let row = [];
+  let field = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const next = text[i + 1];
+
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        field += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === "," && !inQuotes) {
+      row.push(field);
+      field = "";
+    } else if ((char === "\n" || char === "\r") && !inQuotes) {
+      if (char === "\r" && next === "\n") i++;
+
+      row.push(field);
+      field = "";
+
+      if (row.some(value => value !== "")) {
+        rows.push(row);
+      }
+
+      row = [];
+    } else {
+      field += char;
+    }
+  }
+
+  row.push(field);
+  if (row.some(value => value !== "")) rows.push(row);
+
+  return rows;
+}
+
+function parseCSVToObjects(text) {
+  const rows = parseCSVRows(text);
+  if (!rows.length) return [];
+
+  const headers = rows[0].map(h => h.trim());
+
+  return rows.slice(1).map(values => {
+    const object = {};
+    headers.forEach((header, index) => {
+      object[header] = values[index] ?? "";
+    });
+    return object;
+  });
+}
+
+/* ==============================================================
+   DATE DEFAULTS
+   ============================================================== */
+
+function todayISO() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function daysAgoISO(days) {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+$("txnStart").value = daysAgoISO(30);
+$("txnEnd").value = todayISO();
+
+/* ---------- Start app ---------- */
+loadTeams();
+</script>
+</body>
+</html>

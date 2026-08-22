@@ -20,7 +20,7 @@
 <!-- Name displayed underneath the Home Screen icon -->
 <meta name="apple-mobile-web-app-title" content="Savant">
 
-<title>Master MLB Downloader — v6</title>
+<title>Master MLB Downloader — v7</title>
 <style>
   /* ============================================================
      MLB ROSTER + TRADES CSV DOWNLOADER — FROZEN BASELINE v1
@@ -84,6 +84,14 @@
        • Standings remains a visible button beside the dropdown.
        • Standings Team column made narrower on mobile.
        • Standings numeric headers/data centered.
+     ============================================================ */
+
+  /* ============================================================
+     CHECKPOINT v7 — LAYERED ON TOP OF WORKING v6
+     ------------------------------------------------------------
+     ONLY CHANGE IN v7:
+       • Standings division cards now resolve MLB division IDs/names
+         to East / Central / West instead of generic "Division".
      ============================================================ */
 
   /* ============================================================
@@ -1033,7 +1041,7 @@
   <header>
     <h1>Master MLB Downloader</h1>
     <p class="subtitle">Live MLB rosters, transactions, trades, roster comparison, and standings.</p>
-    <span class="version">Checkpoint v6 • v1–v5 preserved</span>
+    <span class="version">Checkpoint v7 • v1–v6 preserved</span>
   </header>
 
   <nav class="tabs compact-nav" aria-label="Downloader sections">
@@ -2959,9 +2967,53 @@ function standingsTableHTML(teamRecords, view) {
 }
 
 function divisionNameFromRecord(record) {
-  return record?.division?.nameShort ||
-         record?.division?.name ||
-         "Division";
+  /*
+    ==============================================================
+    v7 — DIVISION LABEL FIX
+    --------------------------------------------------------------
+    The standings response can omit the expanded division name even
+    though it still supplies the MLB division ID. Use that stable ID
+    as the fallback so the cards always read East / Central / West.
+
+    MLB division IDs:
+      200 = AL West      201 = AL East      202 = AL Central
+      203 = NL West      204 = NL East      205 = NL Central
+
+    The league is already displayed above the cards, so we intentionally
+    show only East / Central / West rather than repeating AL/NL.
+    ============================================================== */
+  const divisionId = Number(record?.division?.id);
+
+  const divisionById = {
+    200: "West",
+    201: "East",
+    202: "Central",
+    203: "West",
+    204: "East",
+    205: "Central"
+  };
+
+  if (divisionById[divisionId]) {
+    return divisionById[divisionId];
+  }
+
+  /*
+    If MLB supplies a division name instead of an ID, normalize names
+    such as "American League East" or "AL East" to just "East".
+  */
+  const suppliedName = String(
+    record?.division?.nameShort ||
+    record?.division?.name ||
+    ""
+  ).trim();
+
+  const geographicMatch = suppliedName.match(/\b(East|Central|West)\b/i);
+  if (geographicMatch) {
+    const label = geographicMatch[1].toLowerCase();
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  }
+
+  return "Division";
 }
 
 function leagueIdFromRecord(record) {

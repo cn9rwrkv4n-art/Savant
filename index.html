@@ -20,7 +20,7 @@
 <!-- Name displayed underneath the Home Screen icon -->
 <meta name="apple-mobile-web-app-title" content="Savant">
 
-<title>MLB Roster + Trades Downloader</title>
+<title>Master MLB Downloader — v4</title>
 <style>
   /* ============================================================
      MLB ROSTER + TRADES CSV DOWNLOADER — FROZEN BASELINE v1
@@ -70,6 +70,20 @@
        • League and Season controls.
        • Optional More Stats standings columns.
        • Team logos/names remain Savant links in standings.
+     ============================================================ */
+
+  /* ============================================================
+     CHECKPOINT v4 — LAYERED ON TOP OF WORKING v3
+     ------------------------------------------------------------
+     ADDED / CHANGED IN v4:
+       • App title changed to "Master MLB Downloader".
+       • Header subtitle simplified.
+       • Explanatory copy shortened per request.
+       • Compare change-label hint reformatted to multiple lines.
+       • Main tool navigation moved into one dropdown.
+       • Standings remains a visible button beside the dropdown.
+       • Standings Team column made narrower on mobile.
+       • Standings numeric headers/data centered.
      ============================================================ */
 
   :root {
@@ -135,6 +149,41 @@
     padding-bottom: 4px;
     margin: 18px 0 14px;
   }
+
+  /* ============================================================
+     v4 — COMPACT MAIN NAVIGATION
+     ============================================================ */
+
+  .compact-nav {
+    overflow: visible;
+    align-items: stretch;
+  }
+
+  .tool-page-select {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 44px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: white;
+    color: var(--text);
+    padding: 8px 10px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .standings-tab {
+    flex: 0 0 auto;
+    height: 44px;
+  }
+
+  .standings-tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
 
   .tab {
     appearance: none;
@@ -773,8 +822,10 @@
   }
 
   .standings-table {
-    min-width: 560px;
+    width: 100%;
+    min-width: 470px;
     font-size: 13px;
+    table-layout: auto;
   }
 
   .standings-table.more-stats {
@@ -799,12 +850,28 @@
   }
 
   .standings-number {
-    text-align: right;
+    text-align: center;
     font-variant-numeric: tabular-nums;
   }
 
+  .standings-table th:nth-child(n+3) {
+    text-align: center;
+  }
+
   .standings-team-cell {
-    min-width: 185px;
+    width: 145px;
+    min-width: 145px;
+    max-width: 145px;
+  }
+
+  .standings-team-cell .team-preview {
+    max-width: 100%;
+  }
+
+  .standings-team-cell .preview-link-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .record-chip {
@@ -819,6 +886,27 @@
   @media (max-width: 520px) {
     .filter-options.two-column { grid-template-columns: 1fr; }
     .standings-controls { grid-template-columns: 1fr; }
+
+    /* v4: fit Team + W + L into the initial iPhone frame. */
+    .standings-table {
+      min-width: 430px;
+    }
+
+    .standings-team-cell {
+      width: 132px;
+      min-width: 132px;
+      max-width: 132px;
+    }
+
+    .standings-table th,
+    .standings-table td {
+      padding-left: 7px;
+      padding-right: 7px;
+    }
+
+    .standings-rank {
+      width: 28px;
+    }
   }
 
   @media (max-width: 800px) {
@@ -836,16 +924,26 @@
 <body>
 <div class="app">
   <header>
-    <h1>MLB Roster + Trades CSV Downloader</h1>
-    <p class="subtitle">Live MLB rosters, Baseball Savant/MLB Player IDs, transactions, trades, roster comparison, and standings.</p>
-    <span class="version">Checkpoint v3 • v1 + v2 preserved</span>
+    <h1>Master MLB Downloader</h1>
+    <p class="subtitle">Live MLB rosters, transactions, trades, roster comparison, and standings.</p>
+    <span class="version">Checkpoint v4 • v1 + v2 + v3 preserved</span>
   </header>
 
-  <nav class="tabs" aria-label="Downloader sections">
-    <button class="tab active" data-tab="rosterPanel">Roster Downloader</button>
-    <button class="tab" data-tab="transactionsPanel">Transactions / Trades</button>
-    <button class="tab" data-tab="comparePanel">Compare Rosters</button>
-    <button class="tab" data-tab="standingsPanel">Standings</button>
+  <nav class="tabs compact-nav" aria-label="Downloader sections">
+    <!--
+      v4:
+      The three data-tool pages share one dropdown so Standings stays
+      visible beside it on iPhone without horizontal scrolling.
+    -->
+    <select id="toolPageSelect" class="tool-page-select" aria-label="Choose downloader page">
+      <option value="rosterPanel" selected>Roster Downloader</option>
+      <option value="transactionsPanel">Transactions / Trades</option>
+      <option value="comparePanel">Compare Rosters</option>
+    </select>
+
+    <button class="tab standings-tab" id="standingsTabButton" type="button">
+      Standings
+    </button>
   </nav>
 
   <!-- ==========================================================
@@ -1014,11 +1112,6 @@
       <div class="empty">Run a roster preview to see results.</div>
     </div>
 
-    <div class="note">
-      CSV columns: <code>Team</code>, <code>Player</code>, <code>PlayerID</code>,
-      <code>Position</code>, <code>PositionType</code>, <code>RosterStatus</code>, <code>TeamID</code>.
-      The <code>PlayerID</code> is MLB's player ID, which Baseball Savant uses for its player identifiers.
-    </div>
   </section>
 
   <!-- ==========================================================
@@ -1089,8 +1182,7 @@
     </div>
 
     <div class="note">
-      Trade data is based on MLB's transaction records. The app keeps MLB's original transaction
-      description in the CSV so you can review exactly what MLB reported.
+      Trade data is based on MLB's official transaction records.
     </div>
   </section>
 
@@ -1101,7 +1193,6 @@
     <h2>Compare Rosters</h2>
     <p class="help">
       Load a roster CSV previously downloaded by this app, then compare it to the current MLB roster.
-      Player matching is done by unique <code>PlayerID</code>, not by player name.
     </p>
 
     <div class="controls">
@@ -1166,10 +1257,10 @@
     </div>
 
     <div class="note">
-      Change labels:
-      <strong>TEAM CHANGED</strong> = same PlayerID, different team;
-      <strong>ADDED</strong> = appears now but not in the old CSV;
-      <strong>REMOVED</strong> = appeared in the old CSV but not the current comparison scope;
+      <strong>Change labels hint:</strong><br>
+      <strong>TEAM CHANGED</strong> = same PlayerID, different team;<br>
+      <strong>ADDED</strong> = appears now but not in the old CSV;<br>
+      <strong>REMOVED</strong> = appeared in the old CSV but not the current comparison scope;<br>
       <strong>POSITION CHANGED</strong> = same player/team but a different roster position.
     </div>
   </section>
@@ -1267,6 +1358,17 @@
    • Two-way players are intentionally included in BOTH the
      "Batters Only" and "Pitchers Only" roster filters.
    ============================================================== */
+
+/*
+   ==============================================================
+   CHECKPOINT v4 JAVASCRIPT NOTES
+   --------------------------------------------------------------
+   • v3 functionality remains intact.
+   • Main tool tabs are now selected through one dropdown.
+   • Standings remains directly accessible beside that dropdown.
+   • No API or CSV behavior changed in this checkpoint.
+   ==============================================================
+*/
 
 /*
    ==============================================================
@@ -1424,19 +1526,34 @@ function teamPreviewHTML(teamId, fallbackText) {
 }
 
 /* ---------- Tabs ---------- */
-document.querySelectorAll(".tab").forEach(button => {
-  button.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
-    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+/* ==============================================================
+   v4 — MAIN PAGE NAVIGATION
+   --------------------------------------------------------------
+   Roster / Transactions / Compare live in one dropdown.
+   Standings remains a separate visible button.
+   ============================================================== */
 
-    button.classList.add("active");
-    $(button.dataset.tab).classList.add("active");
-
-    // v3: Standings load on first visit, then remain available until refreshed.
-    if (button.dataset.tab === "standingsPanel" && !standingsLoaded) {
-      loadStandings();
-    }
+function showMainPanel(panelId) {
+  document.querySelectorAll(".panel").forEach(panel => {
+    panel.classList.remove("active");
   });
+
+  const target = $(panelId);
+  if (target) target.classList.add("active");
+
+  $("standingsTabButton").classList.toggle("active", panelId === "standingsPanel");
+
+  if (panelId === "standingsPanel" && !standingsLoaded) {
+    loadStandings();
+  }
+}
+
+$("toolPageSelect").addEventListener("change", () => {
+  showMainPanel($("toolPageSelect").value);
+});
+
+$("standingsTabButton").addEventListener("click", () => {
+  showMainPanel("standingsPanel");
 });
 
 /* ==============================================================

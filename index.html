@@ -20,9 +20,7 @@
 <!-- Name displayed underneath the Home Screen icon -->
 <meta name="apple-mobile-web-app-title" content="Savant">
 
-<title>MLB Roster + Trades CSV Downloader — v1</title>
-
-  
+<title>MLB Roster + Trades CSV Downloader — v2</title>
 <style>
   /* ============================================================
      MLB ROSTER + TRADES CSV DOWNLOADER — FROZEN BASELINE v1
@@ -37,6 +35,21 @@
      IMPORTANT VERSION NOTE:
      Treat this file as the frozen v1 baseline. Future changes
      should be layered into v2, v3, etc. instead of replacing v1.
+     ============================================================ */
+
+  /* ============================================================
+     CHECKPOINT v2 — LAYERED ON TOP OF MASTER FROZEN BASELINE v1
+     ------------------------------------------------------------
+     ADDED IN v2:
+       • Team-logo custom dropdowns for all Team selectors.
+       • Team names/logos link to Baseball Savant in previews.
+       • Player headshots appear beside player names in previews.
+       • Player names/headshots link to Baseball Savant.
+       • Player/Team ID columns are hidden from previews ONLY.
+       • IDs remain unchanged in every CSV export.
+       • iOS date controls are the same compact height as dropdowns.
+       • Transaction preview typography is normalized.
+       • iPhone/iPad Home Screen metadata is preserved.
      ============================================================ */
 
   :root {
@@ -295,6 +308,217 @@
     padding: 1px 5px;
   }
 
+
+  /* ============================================================
+     v2 — CUSTOM TEAM DROPDOWNS + PREVIEW MEDIA
+     ============================================================ */
+
+  /* Prevent iOS Safari from unexpectedly enlarging table text. */
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* ------------------------------------------------------------
+     iOS DATE INPUT FIX
+     Force native date boxes to use the same closed height as the
+     normal dropdown controls while retaining the native date picker.
+     ------------------------------------------------------------ */
+  input[type="date"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 42px;
+    min-height: 42px;
+    max-height: 42px;
+    line-height: 24px;
+    padding: 8px 10px;
+  }
+
+  input[type="date"]::-webkit-date-and-time-value {
+    margin: 0;
+    padding: 0;
+    text-align: left;
+  }
+
+  /* ------------------------------------------------------------
+     CUSTOM TEAM PICKER
+     A native <select> is still maintained invisibly so all of the
+     original roster / transaction / comparison logic can continue
+     reading .value exactly as it did in v1.
+     ------------------------------------------------------------ */
+  .team-picker {
+    position: relative;
+    width: 100%;
+  }
+
+  .team-picker-native {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
+  }
+
+  .team-picker-button {
+    width: 100%;
+    height: 42px;
+    border: 1px solid #cfd6df;
+    border-radius: 9px;
+    background: white;
+    color: var(--text);
+    padding: 6px 10px;
+    font: inherit;
+    font-size: 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    text-align: left;
+  }
+
+  .team-picker-button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .team-picker-button .team-picker-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .team-picker-chevron {
+    flex: 0 0 auto;
+    font-size: 16px;
+    line-height: 1;
+    color: #475467;
+  }
+
+  .team-picker-menu {
+    position: absolute;
+    z-index: 50;
+    left: 0;
+    right: 0;
+    top: calc(100% + 5px);
+    max-height: 310px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    background: white;
+    border: 1px solid #cfd6df;
+    border-radius: 10px;
+    box-shadow: 0 12px 28px rgba(16, 24, 40, 0.16);
+    padding: 5px;
+  }
+
+  .team-picker-menu[hidden] {
+    display: none;
+  }
+
+  .team-picker-option {
+    width: 100%;
+    min-height: 42px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--text);
+    padding: 6px 8px;
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+  }
+
+  .team-picker-option:hover,
+  .team-picker-option:focus {
+    background: #f2f4f7;
+    outline: none;
+  }
+
+  .team-picker-option.selected {
+    background: var(--soft);
+    font-weight: 700;
+  }
+
+  .team-logo {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    flex: 0 0 28px;
+  }
+
+  .team-logo.small {
+    width: 26px;
+    height: 26px;
+    flex-basis: 26px;
+  }
+
+  /* ------------------------------------------------------------
+     PLAYER + TEAM LINKS IN PREVIEW TABLES
+     ------------------------------------------------------------ */
+  .preview-link {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .preview-link:hover .preview-link-text,
+  .preview-link:focus .preview-link-text {
+    text-decoration: underline;
+  }
+
+  .player-preview,
+  .team-preview {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    vertical-align: middle;
+  }
+
+  .player-headshot {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    object-fit: cover;
+    border-radius: 50%;
+    background: #f2f4f7;
+    border: 1px solid #e4e7ec;
+  }
+
+  /* If MLB has no headshot for a player, keep the table aligned. */
+  .player-headshot.missing {
+    visibility: hidden;
+  }
+
+  /* ------------------------------------------------------------
+     TRANSACTION PREVIEW TYPOGRAPHY
+     Explicitly keep Description the same size as every other cell.
+     ------------------------------------------------------------ */
+  #txnTableWrap table,
+  #txnTableWrap th,
+  #txnTableWrap td {
+    font-size: 13px !important;
+    line-height: 1.35;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  #txnTableWrap th {
+    font-size: 12px !important;
+  }
+
+  /* Keep linked names the same size as their surrounding table cell. */
+  .player-preview,
+  .team-preview,
+  .preview-link-text {
+    font-size: inherit;
+    line-height: inherit;
+  }
+
   @media (max-width: 800px) {
     .controls { grid-template-columns: 1fr 1fr; }
   }
@@ -312,7 +536,7 @@
   <header>
     <h1>MLB Roster + Trades CSV Downloader</h1>
     <p class="subtitle">Live MLB rosters, Baseball Savant/MLB Player IDs, transactions, trades, and roster comparison.</p>
-    <span class="version">Master Frozen Baseline v1</span>
+    <span class="version">Checkpoint v2 • Master Frozen Baseline v1 preserved</span>
   </header>
 
   <nav class="tabs" aria-label="Downloader sections">
@@ -351,9 +575,29 @@
 
       <div class="field">
         <label for="rosterTeam">Team</label>
-        <select id="rosterTeam">
-          <option value="all">All MLB Teams</option>
-        </select>
+        <div class="team-picker" data-select-id="rosterTeam">
+          <!--
+            v2 NOTE:
+            The hidden native select preserves all original v1 JavaScript
+            behavior. The visible custom picker adds team logo support.
+          -->
+          <select id="rosterTeam" class="team-picker-native" aria-hidden="true" tabindex="-1">
+            <option value="all">All MLB Teams</option>
+          </select>
+
+          <button type="button"
+                  class="team-picker-button"
+                  aria-haspopup="listbox"
+                  aria-expanded="false">
+            <img class="team-logo small team-picker-current-logo"
+                 alt=""
+                 src="https://www.mlbstatic.com/team-logos/league-on-light/1.svg">
+            <span class="team-picker-label">All MLB Teams</span>
+            <span class="team-picker-chevron" aria-hidden="true">⌄</span>
+          </button>
+
+          <div class="team-picker-menu" role="listbox" hidden></div>
+        </div>
       </div>
 
       <div class="field">
@@ -414,9 +658,29 @@
 
       <div class="field">
         <label for="txnTeam">Team</label>
-        <select id="txnTeam">
-          <option value="all">All MLB Teams</option>
-        </select>
+        <div class="team-picker" data-select-id="txnTeam">
+          <!--
+            v2 NOTE:
+            The hidden native select preserves all original v1 JavaScript
+            behavior. The visible custom picker adds team logo support.
+          -->
+          <select id="txnTeam" class="team-picker-native" aria-hidden="true" tabindex="-1">
+            <option value="all">All MLB Teams</option>
+          </select>
+
+          <button type="button"
+                  class="team-picker-button"
+                  aria-haspopup="listbox"
+                  aria-expanded="false">
+            <img class="team-logo small team-picker-current-logo"
+                 alt=""
+                 src="https://www.mlbstatic.com/team-logos/league-on-light/1.svg">
+            <span class="team-picker-label">All MLB Teams</span>
+            <span class="team-picker-chevron" aria-hidden="true">⌄</span>
+          </button>
+
+          <div class="team-picker-menu" role="listbox" hidden></div>
+        </div>
       </div>
     </div>
 
@@ -432,7 +696,7 @@
 
     <div class="note">
       Trade data is based on MLB's transaction records. The app keeps MLB's original transaction
-      description in the CSV so I can review exactly what MLB reported.
+      description in the CSV so you can review exactly what MLB reported.
     </div>
   </section>
 
@@ -471,9 +735,29 @@
 
       <div class="field">
         <label for="compareTeam">Team Scope</label>
-        <select id="compareTeam">
-          <option value="all">All MLB Teams</option>
-        </select>
+        <div class="team-picker" data-select-id="compareTeam">
+          <!--
+            v2 NOTE:
+            The hidden native select preserves all original v1 JavaScript
+            behavior. The visible custom picker adds team logo support.
+          -->
+          <select id="compareTeam" class="team-picker-native" aria-hidden="true" tabindex="-1">
+            <option value="all">All MLB Teams</option>
+          </select>
+
+          <button type="button"
+                  class="team-picker-button"
+                  aria-haspopup="listbox"
+                  aria-expanded="false">
+            <img class="team-logo small team-picker-current-logo"
+                 alt=""
+                 src="https://www.mlbstatic.com/team-logos/league-on-light/1.svg">
+            <span class="team-picker-label">All MLB Teams</span>
+            <span class="team-picker-chevron" aria-hidden="true">⌄</span>
+          </button>
+
+          <div class="team-picker-menu" role="listbox" hidden></div>
+        </div>
       </div>
     </div>
 
@@ -528,6 +812,15 @@
      "Batters Only" and "Pitchers Only" roster filters.
    ============================================================== */
 
+/*
+   ==============================================================
+   CHECKPOINT v2 JAVASCRIPT NOTES
+   --------------------------------------------------------------
+   • v1 data objects and CSV exports remain intact.
+   • New images and Savant links are display-only.
+   • Hidden native Team selects keep all original API/filter logic.
+   ==============================================================
+*/
 const API_BASE = "https://statsapi.mlb.com/api/v1";
 
 let mlbTeams = [];
@@ -551,6 +844,106 @@ function escapeHTML(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+/* ==============================================================
+   v2 — DISPLAY-ONLY IMAGE + BASEBALL SAVANT URL HELPERS
+   --------------------------------------------------------------
+   IMPORTANT:
+   These URLs are used only to improve the browser preview.
+   The original CSV fields and export order remain unchanged.
+   ============================================================== */
+
+function playerHeadshotURL(playerId) {
+  return `https://content.mlb.com/images/headshots/current/60x60/${encodeURIComponent(playerId)}.png`;
+}
+
+function playerSavantURL(playerId) {
+  return `https://baseballsavant.mlb.com/savant-player/${encodeURIComponent(playerId)}`;
+}
+
+function teamLogoURL(teamId) {
+  return `https://www.mlbstatic.com/team-logos/${encodeURIComponent(teamId)}.svg`;
+}
+
+function leagueLogoURL() {
+  return "https://www.mlbstatic.com/team-logos/league-on-light/1.svg";
+}
+
+function teamSavantURL(teamId) {
+  return `https://baseballsavant.mlb.com/team/${encodeURIComponent(teamId)}`;
+}
+
+function findTeamById(teamId) {
+  return mlbTeams.find(team => String(team.id) === String(teamId));
+}
+
+function findTeamByAbbreviation(abbreviation) {
+  const wanted = String(abbreviation || "").trim().toUpperCase();
+
+  return mlbTeams.find(team => {
+    const candidates = [
+      team.abbreviation,
+      team.teamCode,
+      team.fileCode,
+      team.name
+    ].map(value => String(value || "").trim().toUpperCase());
+
+    return candidates.includes(wanted);
+  });
+}
+
+/*
+  Render a player headshot + name as one link.
+  target="_blank" opens Baseball Savant separately from the web app.
+*/
+function playerPreviewHTML(playerName, playerId) {
+  const name = escapeHTML(playerName || "");
+  const id = String(playerId || "").trim();
+
+  if (!id) return name;
+
+  return `
+    <a class="preview-link player-preview"
+       href="${playerSavantURL(id)}"
+       target="_blank"
+       rel="noopener noreferrer"
+       title="Open ${name} on Baseball Savant">
+      <img class="player-headshot"
+           src="${playerHeadshotURL(id)}"
+           alt=""
+           loading="lazy"
+           onerror="this.classList.add('missing')">
+      <span class="preview-link-text">${name}</span>
+    </a>
+  `;
+}
+
+/*
+  Render a team logo + team name as one Baseball Savant link.
+  If the exact team object is unavailable, the original fallback text
+  is shown so preview data is never lost.
+*/
+function teamPreviewHTML(teamId, fallbackText) {
+  const team = findTeamById(teamId) || findTeamByAbbreviation(fallbackText);
+  const safeFallback = escapeHTML(fallbackText || "");
+
+  if (!team) return safeFallback;
+
+  return `
+    <a class="preview-link team-preview"
+       href="${teamSavantURL(team.id)}"
+       target="_blank"
+       rel="noopener noreferrer"
+       title="Open ${escapeHTML(team.name)} on Baseball Savant">
+      <img class="team-logo small"
+           src="${teamLogoURL(team.id)}"
+           alt=""
+           loading="lazy"
+           onerror="this.style.visibility='hidden'">
+      <span class="preview-link-text">${escapeHTML(team.name)}</span>
+    </a>
+  `;
 }
 
 /* ---------- Tabs ---------- */
@@ -596,21 +989,146 @@ async function loadTeams() {
 
 function populateTeamSelect(selectId) {
   const select = $(selectId);
-  const currentValue = select.value;
+  const currentValue = select.value || "all";
 
+  // Preserve the original native value list for all existing v1 logic.
   select.innerHTML = '<option value="all">All MLB Teams</option>';
 
   for (const team of mlbTeams) {
     const option = document.createElement("option");
     option.value = String(team.id);
-    option.textContent = `${team.abbreviation} — ${team.name}`;
+
+    /*
+      v2 NOTE:
+      The hidden native <option> text no longer needs the acronym because
+      the user-facing custom picker shows the actual team logo + full name.
+    */
+    option.textContent = team.name;
     select.appendChild(option);
   }
 
   if ([...select.options].some(o => o.value === currentValue)) {
     select.value = currentValue;
+  } else {
+    select.value = "all";
   }
+
+  populateTeamPicker(selectId);
 }
+
+/* ==============================================================
+   v2 — CUSTOM TEAM PICKER BEHAVIOR
+   ============================================================== */
+
+function populateTeamPicker(selectId) {
+  const select = $(selectId);
+  const picker = document.querySelector(`.team-picker[data-select-id="${selectId}"]`);
+  if (!picker) return;
+
+  const menu = picker.querySelector(".team-picker-menu");
+  menu.innerHTML = "";
+
+  // First option: all teams.
+  menu.appendChild(createTeamPickerOption(selectId, "all", null));
+
+  // Then all 30 MLB teams.
+  for (const team of mlbTeams) {
+    menu.appendChild(createTeamPickerOption(selectId, String(team.id), team));
+  }
+
+  updateTeamPickerDisplay(selectId);
+}
+
+function createTeamPickerOption(selectId, value, team) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "team-picker-option";
+  button.dataset.value = value;
+  button.setAttribute("role", "option");
+
+  const image = document.createElement("img");
+  image.className = "team-logo";
+  image.alt = "";
+  image.src = team ? teamLogoURL(team.id) : leagueLogoURL();
+  image.addEventListener("error", () => {
+    image.style.visibility = "hidden";
+  });
+
+  const label = document.createElement("span");
+  label.textContent = team ? team.name : "All MLB Teams";
+
+  button.append(image, label);
+
+  button.addEventListener("click", () => {
+    const select = $(selectId);
+    select.value = value;
+
+    // Dispatch a native change event so future additions can listen normally.
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+
+    updateTeamPickerDisplay(selectId);
+    closeAllTeamPickers();
+  });
+
+  return button;
+}
+
+function updateTeamPickerDisplay(selectId) {
+  const select = $(selectId);
+  const picker = document.querySelector(`.team-picker[data-select-id="${selectId}"]`);
+  if (!picker) return;
+
+  const value = select.value;
+  const team = value === "all" ? null : findTeamById(value);
+  const label = picker.querySelector(".team-picker-label");
+  const logo = picker.querySelector(".team-picker-current-logo");
+
+  label.textContent = team ? team.name : "All MLB Teams";
+  logo.src = team ? teamLogoURL(team.id) : leagueLogoURL();
+  logo.style.visibility = "visible";
+
+  picker.querySelectorAll(".team-picker-option").forEach(option => {
+    const selected = option.dataset.value === value;
+    option.classList.toggle("selected", selected);
+    option.setAttribute("aria-selected", selected ? "true" : "false");
+  });
+}
+
+function closeAllTeamPickers(exceptPicker = null) {
+  document.querySelectorAll(".team-picker").forEach(picker => {
+    if (picker === exceptPicker) return;
+
+    const menu = picker.querySelector(".team-picker-menu");
+    const button = picker.querySelector(".team-picker-button");
+
+    menu.hidden = true;
+    button.setAttribute("aria-expanded", "false");
+  });
+}
+
+function initializeTeamPickerButtons() {
+  document.querySelectorAll(".team-picker").forEach(picker => {
+    const button = picker.querySelector(".team-picker-button");
+    const menu = picker.querySelector(".team-picker-menu");
+
+    button.addEventListener("click", event => {
+      event.stopPropagation();
+      const willOpen = menu.hidden;
+
+      closeAllTeamPickers(picker);
+      menu.hidden = !willOpen;
+      button.setAttribute("aria-expanded", willOpen ? "true" : "false");
+    });
+  });
+
+  document.addEventListener("click", () => closeAllTeamPickers());
+
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape") closeAllTeamPickers();
+  });
+}
+
+initializeTeamPickerButtons();
 
 function selectedTeams(selectId) {
   const value = $(selectId).value;
@@ -750,9 +1268,8 @@ async function previewRoster() {
     );
 
     rosterRows = sortRosterRows(rows);
-    renderTable("rosterTableWrap", rosterRows, [
-      "Team", "Player", "PlayerID", "Position", "PositionType", "RosterStatus", "TeamID"
-    ]);
+    // v2: IDs stay in rosterRows for CSV export but are hidden on screen.
+    renderRosterPreview(rosterRows);
 
     setStatus("rosterStatus", `Ready: ${rosterRows.length} player(s).`, "success");
     $("downloadRoster").disabled = rosterRows.length === 0;
@@ -779,6 +1296,11 @@ $("downloadRoster").addEventListener("click", () => {
 
   const filename = `mlb-roster_${rosterLabel}_${playerLabel}_${teamLabel}_${todayISO()}.csv`;
 
+  /*
+    v2 NOTE:
+    PlayerID and TeamID are intentionally STILL exported even though
+    those columns are hidden from the on-screen preview.
+  */
   downloadCSV(filename, rosterRows, [
     "Team", "Player", "PlayerID", "Position", "PositionType", "RosterStatus", "TeamID"
   ]);
@@ -852,10 +1374,8 @@ async function previewTransactions() {
         String(a.Player).localeCompare(String(b.Player))
       );
 
-    renderTable("txnTableWrap", transactionRows, [
-      "Date", "Player", "PlayerID", "FromTeam", "FromTeamID",
-      "ToTeam", "ToTeamID", "Type", "TypeCode", "Description"
-    ]);
+    // v2: PlayerID / FromTeamID / ToTeamID remain exportable but hidden on screen.
+    renderTransactionPreview(transactionRows);
 
     setStatus("txnStatus", `Ready: ${transactionRows.length} transaction record(s).`, "success");
     $("downloadTransactions").disabled = transactionRows.length === 0;
@@ -882,6 +1402,10 @@ $("downloadTransactions").addEventListener("click", () => {
   const filename =
     `mlb-${typeLabel}_${teamLabel}_${$("txnStart").value}_to_${$("txnEnd").value}.csv`;
 
+  /*
+    v2 NOTE:
+    ID columns remain in the CSV even though the preview hides them.
+  */
   downloadCSV(filename, transactionRows, [
     "Date", "Player", "PlayerID", "FromTeam", "FromTeamID",
     "ToTeam", "ToTeamID", "Type", "TypeCode", "Description"
@@ -919,11 +1443,8 @@ async function runComparison() {
 
     comparisonRows = compareRosters(oldRows, currentRows);
 
-    renderTable("compareTableWrap", comparisonRows, [
-      "Change", "Player", "PlayerID",
-      "PreviousTeam", "CurrentTeam",
-      "PreviousPosition", "CurrentPosition"
-    ]);
+    // v2: PlayerID remains available for comparison/export but is hidden on screen.
+    renderComparisonPreview(comparisonRows);
 
     setStatus(
       "compareStatus",
@@ -1058,6 +1579,96 @@ $("downloadComparison").addEventListener("click", () => {
 /* ==============================================================
    TABLE RENDERING
    ============================================================== */
+
+/* ==============================================================
+   v2 — SPECIALIZED PREVIEW TABLES
+   --------------------------------------------------------------
+   IDs remain in row objects for CSV export but are intentionally
+   omitted from the browser preview.
+   ============================================================== */
+
+function renderRosterPreview(rows) {
+  const columns = ["Team", "Player", "Position", "PositionType", "RosterStatus"];
+
+  renderRichTable("rosterTableWrap", rows, columns, (row, column) => {
+    if (column === "Team") {
+      return teamPreviewHTML(row.TeamID, row.Team);
+    }
+
+    if (column === "Player") {
+      return playerPreviewHTML(row.Player, row.PlayerID);
+    }
+
+    return escapeHTML(row[column] ?? "");
+  });
+}
+
+function renderTransactionPreview(rows) {
+  const columns = [
+    "Date", "Player", "FromTeam", "ToTeam", "Type", "TypeCode", "Description"
+  ];
+
+  renderRichTable("txnTableWrap", rows, columns, (row, column) => {
+    if (column === "Player") {
+      return playerPreviewHTML(row.Player, row.PlayerID);
+    }
+
+    if (column === "FromTeam") {
+      return teamPreviewHTML(row.FromTeamID, row.FromTeam);
+    }
+
+    if (column === "ToTeam") {
+      return teamPreviewHTML(row.ToTeamID, row.ToTeam);
+    }
+
+    return escapeHTML(row[column] ?? "");
+  });
+}
+
+function renderComparisonPreview(rows) {
+  const columns = [
+    "Change", "Player", "PreviousTeam", "CurrentTeam",
+    "PreviousPosition", "CurrentPosition"
+  ];
+
+  renderRichTable("compareTableWrap", rows, columns, (row, column) => {
+    if (column === "Player") {
+      return playerPreviewHTML(row.Player, row.PlayerID);
+    }
+
+    if (column === "PreviousTeam" || column === "CurrentTeam") {
+      return teamPreviewHTML("", row[column]);
+    }
+
+    return escapeHTML(row[column] ?? "");
+  });
+}
+
+function renderRichTable(containerId, rows, columns, cellRenderer) {
+  const container = $(containerId);
+
+  if (!rows.length) {
+    renderEmpty(containerId, "No matching rows.");
+    return;
+  }
+
+  const header = columns.map(col => `<th>${escapeHTML(col)}</th>`).join("");
+
+  const body = rows.map(row => {
+    const cells = columns
+      .map(col => `<td>${cellRenderer(row, col)}</td>`)
+      .join("");
+
+    return `<tr>${cells}</tr>`;
+  }).join("");
+
+  container.innerHTML = `
+    <table>
+      <thead><tr>${header}</tr></thead>
+      <tbody>${body}</tbody>
+    </table>
+  `;
+}
 
 function renderTable(containerId, rows, columns) {
   const container = $(containerId);

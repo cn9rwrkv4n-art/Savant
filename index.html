@@ -20,7 +20,7 @@
 <!-- Name displayed underneath the Home Screen icon -->
 <meta name="apple-mobile-web-app-title" content="Savant">
 
-<title>Master MLB Downloader — v4</title>
+<title>Master MLB Downloader — v5</title>
 <style>
   /* ============================================================
      MLB ROSTER + TRADES CSV DOWNLOADER — FROZEN BASELINE v1
@@ -84,6 +84,18 @@
        • Standings remains a visible button beside the dropdown.
        • Standings Team column made narrower on mobile.
        • Standings numeric headers/data centered.
+     ============================================================ */
+
+  /* ============================================================
+     CHECKPOINT v5 — LAYERED ON TOP OF WORKING v4
+     ------------------------------------------------------------
+     CHANGED IN v5:
+       • Standings Team column widened on iPhone.
+       • W / L / PCT columns tightened to preserve team-name space.
+       • Custom Team and Filters dropdown arrows now use the same
+         two-arrow visual language as native iOS select menus.
+       • Standings navigation now changes the tool selector state so
+         selecting the previously-active tool always fires correctly.
      ============================================================ */
 
   :root {
@@ -466,6 +478,39 @@
     color: #475467;
   }
 
+  /* ============================================================
+     v5 — TWO-ARROW CUSTOM SELECT INDICATOR
+     ------------------------------------------------------------
+     Native iOS <select> controls show an up/down pair. These custom
+     controls now use the same visual idea for consistency.
+     ============================================================ */
+  .double-select-arrow {
+    flex: 0 0 18px;
+    width: 18px;
+    height: 24px;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    color: #17202a;
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 0.72;
+    pointer-events: none;
+  }
+
+  .double-select-arrow span {
+    display: block;
+    height: 8px;
+    line-height: 8px;
+  }
+
+  .filter-double-arrow {
+    margin-left: 8px;
+  }
+
+
   .team-picker-menu {
     position: absolute;
     z-index: 50;
@@ -622,15 +667,11 @@
     background: #f8fafc;
   }
 
-  .filter-toggle-arrow {
-    font-size: 16px;
-    color: #475467;
-    transition: transform 0.15s ease;
-  }
-
-  .filter-toggle[aria-expanded="true"] .filter-toggle-arrow {
-    transform: rotate(180deg);
-  }
+  /*
+    v5:
+    The Filters control now uses the fixed two-arrow indicator above,
+    so the old single-chevron rotation is no longer needed.
+  */
 
   .filter-content {
     border-top: 1px solid var(--line);
@@ -858,10 +899,41 @@
     text-align: center;
   }
 
+  /* v5: compact core record columns so Team gets more room. */
+  .standings-table th:nth-child(3),
+  .standings-table td:nth-child(3),
+  .standings-table th:nth-child(4),
+  .standings-table td:nth-child(4) {
+    width: 42px;
+    min-width: 42px;
+    max-width: 42px;
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+
+  .standings-table th:nth-child(5),
+  .standings-table td:nth-child(5) {
+    width: 56px;
+    min-width: 56px;
+    max-width: 56px;
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+
+  .standings-table th:nth-child(6),
+  .standings-table td:nth-child(6) {
+    width: 54px;
+    min-width: 54px;
+    max-width: 54px;
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+
+
   .standings-team-cell {
-    width: 145px;
-    min-width: 145px;
-    max-width: 145px;
+    width: 190px;
+    min-width: 190px;
+    max-width: 190px;
   }
 
   .standings-team-cell .team-preview {
@@ -887,25 +959,40 @@
     .filter-options.two-column { grid-template-columns: 1fr; }
     .standings-controls { grid-template-columns: 1fr; }
 
-    /* v4: fit Team + W + L into the initial iPhone frame. */
+    /*
+      v5:
+      Give Team the majority of the initial iPhone frame while keeping
+      W, L and PCT compact. GB remains available immediately after PCT.
+    */
     .standings-table {
-      min-width: 430px;
+      min-width: 405px;
     }
 
     .standings-team-cell {
-      width: 132px;
-      min-width: 132px;
-      max-width: 132px;
+      width: 178px;
+      min-width: 178px;
+      max-width: 178px;
     }
 
     .standings-table th,
     .standings-table td {
-      padding-left: 7px;
-      padding-right: 7px;
+      padding-left: 5px;
+      padding-right: 5px;
     }
 
     .standings-rank {
-      width: 28px;
+      width: 24px;
+      min-width: 24px;
+    }
+
+    .standings-team-cell .team-preview {
+      gap: 6px;
+    }
+
+    .standings-team-cell .team-logo.small {
+      width: 24px;
+      height: 24px;
+      flex-basis: 24px;
     }
   }
 
@@ -926,7 +1013,7 @@
   <header>
     <h1>Master MLB Downloader</h1>
     <p class="subtitle">Live MLB rosters, transactions, trades, roster comparison, and standings.</p>
-    <span class="version">Checkpoint v4 • v1 + v2 + v3 preserved</span>
+    <span class="version">Checkpoint v5 • v1–v4 preserved</span>
   </header>
 
   <nav class="tabs compact-nav" aria-label="Downloader sections">
@@ -939,6 +1026,13 @@
       <option value="rosterPanel" selected>Roster Downloader</option>
       <option value="transactionsPanel">Transactions / Trades</option>
       <option value="comparePanel">Compare Rosters</option>
+
+      <!--
+        v5 INTERNAL NAVIGATION STATE:
+        Selecting the Standings button sets this option so returning to
+        the previously-selected tool always creates a real value change.
+      -->
+      <option value="standingsPanel" disabled>Standings</option>
     </select>
 
     <button class="tab standings-tab" id="standingsTabButton" type="button">
@@ -994,7 +1088,9 @@
                  alt=""
                  src="https://www.mlbstatic.com/team-logos/league-on-light/1.svg">
             <span class="team-picker-label">All MLB Teams</span>
-            <span class="team-picker-chevron" aria-hidden="true">⌄</span>
+            <span class="double-select-arrow" aria-hidden="true">
+              <span>⌃</span><span>⌄</span>
+            </span>
           </button>
 
           <div class="team-picker-menu" role="listbox" hidden></div>
@@ -1029,7 +1125,9 @@
               aria-expanded="false"
               aria-controls="rosterFilterContent">
         <span id="rosterFilterLabel">Filters</span>
-        <span class="filter-toggle-arrow" aria-hidden="true">⌄</span>
+        <span class="double-select-arrow filter-double-arrow" aria-hidden="true">
+          <span>⌃</span><span>⌄</span>
+        </span>
       </button>
 
       <div class="filter-content" id="rosterFilterContent" hidden>
@@ -1163,7 +1261,9 @@
                  alt=""
                  src="https://www.mlbstatic.com/team-logos/league-on-light/1.svg">
             <span class="team-picker-label">All MLB Teams</span>
-            <span class="team-picker-chevron" aria-hidden="true">⌄</span>
+            <span class="double-select-arrow" aria-hidden="true">
+              <span>⌃</span><span>⌄</span>
+            </span>
           </button>
 
           <div class="team-picker-menu" role="listbox" hidden></div>
@@ -1238,7 +1338,9 @@
                  alt=""
                  src="https://www.mlbstatic.com/team-logos/league-on-light/1.svg">
             <span class="team-picker-label">All MLB Teams</span>
-            <span class="team-picker-chevron" aria-hidden="true">⌄</span>
+            <span class="double-select-arrow" aria-hidden="true">
+              <span>⌃</span><span>⌄</span>
+            </span>
           </button>
 
           <div class="team-picker-menu" role="listbox" hidden></div>
@@ -1358,6 +1460,17 @@
    • Two-way players are intentionally included in BOTH the
      "Batters Only" and "Pitchers Only" roster filters.
    ============================================================== */
+
+/*
+   ==============================================================
+   CHECKPOINT v5 JAVASCRIPT NOTES
+   --------------------------------------------------------------
+   • v4 remains the working predecessor checkpoint.
+   • Standings now synchronizes the tool dropdown's internal value,
+     fixing return-to-the-same-tool navigation.
+   • Data/API/CSV behavior is otherwise unchanged.
+   ==============================================================
+*/
 
 /*
    ==============================================================
@@ -1541,9 +1654,19 @@ function showMainPanel(panelId) {
   const target = $(panelId);
   if (target) target.classList.add("active");
 
-  $("standingsTabButton").classList.toggle("active", panelId === "standingsPanel");
+  const standingsActive = panelId === "standingsPanel";
+  $("standingsTabButton").classList.toggle("active", standingsActive);
 
-  if (panelId === "standingsPanel" && !standingsLoaded) {
+  /*
+    v5 FUNCTIONALITY FIX:
+    Keep the dropdown value synchronized with the visible page.
+    When Standings is active, its disabled internal option becomes the
+    selected value. Therefore choosing Roster Downloader afterward is
+    always a true value change, even if Roster was selected previously.
+  */
+  $("toolPageSelect").value = panelId;
+
+  if (standingsActive && !standingsLoaded) {
     loadStandings();
   }
 }

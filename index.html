@@ -20,7 +20,7 @@
 <!-- Name displayed underneath the Home Screen icon -->
 <meta name="apple-mobile-web-app-title" content="Savant">
 
-<title>Master MLB Downloader — v5</title>
+<title>Master MLB Downloader — v6</title>
 <style>
   /* ============================================================
      MLB ROSTER + TRADES CSV DOWNLOADER — FROZEN BASELINE v1
@@ -84,6 +84,15 @@
        • Standings remains a visible button beside the dropdown.
        • Standings Team column made narrower on mobile.
        • Standings numeric headers/data centered.
+     ============================================================ */
+
+  /* ============================================================
+     CHECKPOINT v6 — LAYERED ON TOP OF WORKING v5
+     ------------------------------------------------------------
+     ONLY CHANGE IN v6:
+       • Custom dropdown indicators (Team / Filters) now use compact
+         CSS chevrons sized and spaced to match the native two-arrow
+         indicator shown by Transaction Type on iPhone.
      ============================================================ */
 
   /* ============================================================
@@ -485,25 +494,36 @@
      controls now use the same visual idea for consistency.
      ============================================================ */
   .double-select-arrow {
-    flex: 0 0 18px;
-    width: 18px;
-    height: 24px;
-    display: inline-flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0;
-    color: #17202a;
-    font-size: 12px;
-    font-weight: 900;
-    line-height: 0.72;
+    /*
+      v6:
+      Match the compact native iOS up/down indicator used by the
+      Transaction Type <select>, instead of using text glyphs.
+    */
+    position: relative;
+    flex: 0 0 16px;
+    width: 16px;
+    height: 18px;
+    margin-left: 8px;
     pointer-events: none;
   }
 
   .double-select-arrow span {
-    display: block;
-    height: 8px;
-    line-height: 8px;
+    position: absolute;
+    left: 50%;
+    width: 7px;
+    height: 7px;
+    border-left: 2px solid #17202a;
+    border-top: 2px solid #17202a;
+  }
+
+  .double-select-arrow span:first-child {
+    top: 2px;
+    transform: translateX(-50%) rotate(45deg);
+  }
+
+  .double-select-arrow span:last-child {
+    bottom: 2px;
+    transform: translateX(-50%) rotate(225deg);
   }
 
   .filter-double-arrow {
@@ -1013,7 +1033,7 @@
   <header>
     <h1>Master MLB Downloader</h1>
     <p class="subtitle">Live MLB rosters, transactions, trades, roster comparison, and standings.</p>
-    <span class="version">Checkpoint v5 • v1–v4 preserved</span>
+    <span class="version">Checkpoint v6 • v1–v5 preserved</span>
   </header>
 
   <nav class="tabs compact-nav" aria-label="Downloader sections">
@@ -1089,7 +1109,7 @@
                  src="https://www.mlbstatic.com/team-logos/league-on-light/1.svg">
             <span class="team-picker-label">All MLB Teams</span>
             <span class="double-select-arrow" aria-hidden="true">
-              <span>⌃</span><span>⌄</span>
+              <span></span><span></span>
             </span>
           </button>
 
@@ -1126,7 +1146,7 @@
               aria-controls="rosterFilterContent">
         <span id="rosterFilterLabel">Filters</span>
         <span class="double-select-arrow filter-double-arrow" aria-hidden="true">
-          <span>⌃</span><span>⌄</span>
+          <span></span><span></span>
         </span>
       </button>
 
@@ -1262,7 +1282,7 @@
                  src="https://www.mlbstatic.com/team-logos/league-on-light/1.svg">
             <span class="team-picker-label">All MLB Teams</span>
             <span class="double-select-arrow" aria-hidden="true">
-              <span>⌃</span><span>⌄</span>
+              <span></span><span></span>
             </span>
           </button>
 
@@ -1339,7 +1359,7 @@
                  src="https://www.mlbstatic.com/team-logos/league-on-light/1.svg">
             <span class="team-picker-label">All MLB Teams</span>
             <span class="double-select-arrow" aria-hidden="true">
-              <span>⌃</span><span>⌄</span>
+              <span></span><span></span>
             </span>
           </button>
 
